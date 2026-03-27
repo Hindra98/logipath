@@ -3,4 +3,5 @@ export const StatusEnum = {
   DELIVERED: 'Livré',
   RECEIVED: 'Reçu',
   DELAYED: 'Retard',
+  IN_WAREHOUSE: 'En entrepôt',
 };

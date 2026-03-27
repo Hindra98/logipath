@@ -46,7 +46,7 @@ export default function Sidebar({
       />
 
       <aside
-        className={`fixed md:relative inset-y-0 left-0 z-30 flex flex-col bg-cameroun-yellow/75 text-white
+        className={`fixed md:relative inset-y-0 left-0 z-30 flex flex-col bg-cameroun-green/75 text-white
           ${collapsed ? "w-16" : "w-64"}
           transform transition-all duration-300
           ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}

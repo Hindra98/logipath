@@ -1,22 +1,28 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router";
 import {
   usePackageStore,
+  type Package,
   type PackageStatus,
 } from "../../store/usePackageStore";
 import { StatusEnum } from "../../core/enum";
 import Button from "../ui/Button";
-import { formatDate } from "../../utils/date-format";
+import { formatDate, serializeDate } from "../../utils/date-format";
+import Modal from "../ui/Modal";
+import { Input, Select } from "../ui/Input";
+import { Check, X } from "lucide-react";
 
-function statusBadge(status: PackageStatus) {
-  const base =
-    "inline-flex items-center px-2 py-1 rounded text-xs font-medium";
+function statusBadge(status: string) {
+  const base = "inline-flex items-center px-2 py-1 rounded text-xs font-medium";
   switch (status) {
     case StatusEnum.IN_TRANSIT:
       return (
         <span className={`${base} bg-cameroun-yellow/20 text-cameroun-yellow`}>
           {status}
         </span>
+      );
+    case StatusEnum.IN_WAREHOUSE:
+      return (
+        <span className={`${base} bg-blue-600/20 text-blue-600`}>{status}</span>
       );
     case StatusEnum.DELIVERED:
       return (
@@ -30,10 +36,8 @@ function statusBadge(status: PackageStatus) {
           {status}
         </span>
       );
-      default:
-        return (<span className={`${base} bg-black/20 text-black`}>
-          {status}
-        </span>)
+    default:
+      return <span className={`${base} bg-black/20 text-black`}>{status}</span>;
   }
 }
 
@@ -54,8 +58,18 @@ function statusBadge(status: PackageStatus) {
 
 export default function PackageTable() {
   const [filter, setFilter] = useState("");
-  const { listPackage, packages, loading, error, success, deletePackage } =
-    usePackageStore();
+  const [packageToView, setPackageToView] = useState<Package | null>(null);
+  const [packageToDelete, setPackageToDelete] = useState<Package | null>(null);
+  const [packageToUpdate, setPackageToUpdate] = useState<Package | null>(null);
+  const {
+    listPackage,
+    packages,
+    loading,
+    error,
+    updatePackage,
+    deletePackage,
+    updateStatus,
+  } = usePackageStore();
 
   const filtered = packages?.filter(
     (p) =>
@@ -66,8 +80,8 @@ export default function PackageTable() {
     listPackage();
   }, []);
   return (
-    <div className="w-full">
-      <div className="mb-4">
+    <div className="w-full relative">
+      <div className="mb-4 flex flex-col md:flex-row items-center gap-4">
         <input
           type="text"
           placeholder="Recherche par ID ou destinataire..."
@@ -75,12 +89,24 @@ export default function PackageTable() {
           onChange={(e) => setFilter(e.target.value)}
           className="w-full md:w-1/2 px-3 py-2 border rounded focus:outline-none focus:ring focus:border-cameroun-green"
         />
+        <Button
+          variant="cancel"
+          onClick={(e) => {
+            e.preventDefault();
+            listPackage();
+          }}
+        >
+          Rafraichir
+        </Button>
       </div>
       <div className="overflow-x-auto">
-        {/* Feedback UI avec Tailwind */}
         {loading && (
-          <div className="animate-pulse text-blue-500">
-            Mise à jour en cours...
+          <div className="animate-pulse text-blue-500 flex items-center gap-2 justify-center w-full h-screen z-10 absolute top-0 left-0">
+            <div className="flex items-center gap-2 justify-center w-full h-full bg-black opacity-10 absolute" />
+            <div className="flex items-center gap-2 justify-center w-full h-full z-10">
+              <div className="size-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              <span>Mise à jour en cours...</span>
+            </div>
           </div>
         )}
 
@@ -115,8 +141,14 @@ export default function PackageTable() {
           <tbody className="bg-white divide-y divide-cameroun-green/30">
             {filtered.map((pkg) => (
               <tr key={pkg.id} className="hover:bg-cameroun-green/10">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-cameroun-green">
-                  <Link to={`${pkg.trackingNumber}`}>{pkg.trackingNumber}</Link>
+                <td
+                  className="px-6 py-4 whitespace-nowrap text-sm text-cameroun-green cursor-pointer"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setPackageToView(pkg);
+                  }}
+                >
+                  <span>{pkg.trackingNumber}</span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-cameroun-green">
                   {pkg.customerName}
@@ -125,7 +157,66 @@ export default function PackageTable() {
                   {pkg.destination}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  {statusBadge(pkg.status)}
+                  {packageToUpdate && packageToUpdate.id === pkg.id ? (
+                    <p className="flex items-center justify-between gap-1">
+                      <Select
+                        title="Statut"
+                        value={packageToUpdate?.status}
+                        items={[
+                          { value: "En transit", label: "En transit" },
+                          { value: "En entrepôt", label: "En entrepôt" },
+                          { value: "Livré", label: "Livré" },
+                          { value: "Reçu", label: "Reçu" },
+                          { value: "Retard", label: "Retard" },
+                        ]}
+                        onChange={(e) => {
+                          setPackageToUpdate({
+                            ...packageToUpdate,
+                            status: e.target.value,
+                          });
+                        }}
+                      />
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="destructive"
+                          className="size-5"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setPackageToUpdate(null);
+                          }}
+                        >
+                          <X />
+                        </Button>
+                        <Button
+                          variant="primary"
+                          className="size-5"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            updateStatus(
+                              packageToUpdate.id as number,
+                              packageToUpdate.status as PackageStatus,
+                            );
+                            setPackageToUpdate(null);
+                          }}
+                        >
+                          <Check />
+                        </Button>
+                      </div>
+                    </p>
+                  ) : (
+                    <p className="flex items-center justify-between gap-1">
+                      {statusBadge(pkg.status)}{" "}
+                      <span
+                        className="flex items-center justify-center cursor-pointer gap-0"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPackageToUpdate(pkg);
+                        }}
+                      >
+                        ...
+                      </span>{" "}
+                    </p>
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-cameroun-green">
                   {formatDate(pkg.estimatedDelivery)}
@@ -135,7 +226,7 @@ export default function PackageTable() {
                     variant="secondary"
                     onClick={(e) => {
                       e.preventDefault();
-                      deletePackage(pkg.id);
+                      setPackageToDelete(pkg);
                     }}
                   >
                     Supprimer
@@ -156,6 +247,131 @@ export default function PackageTable() {
           </tbody>
         </table>
       </div>
+      <Modal
+        open={!!packageToDelete}
+        onClose={() => setPackageToDelete(null)}
+        title={`Confirmer la suppression`}
+      >
+        <div className="space-y-2">
+          <p>
+            Voulez-vous supprimer le colis {packageToDelete?.trackingNumber} ?
+          </p>
+          <p>
+            <strong>Destinataire:</strong> {packageToDelete?.customerName}
+          </p>
+          <p>
+            <strong>Destination:</strong> {packageToDelete?.destination}
+          </p>
+          <p className="flex justify-end items-center gap-2 w-full">
+            <Button
+              variant="cancel"
+              onClick={(e) => {
+                e.preventDefault();
+                setPackageToDelete(null);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={(e) => {
+                e.preventDefault();
+                if (packageToDelete) {
+                  deletePackage(packageToDelete.id as number);
+                  setPackageToDelete(null);
+                }
+              }}
+            >
+              Confirmer
+            </Button>
+          </p>
+        </div>
+      </Modal>
+      <Modal
+        open={!!packageToView}
+        onClose={() => setPackageToView(null)}
+        title={`Détails du colis ${packageToView?.trackingNumber}`}
+      >
+        {packageToView && (
+          <div className="space-y-2">
+            <Input
+              label="Destinataire"
+              title="Destinataire"
+              value={packageToView?.customerName}
+              onChange={(e) => {
+                setPackageToView({
+                  ...packageToView,
+                  customerName: e.target.value,
+                });
+              }}
+            />
+            <Input
+              label="Destination"
+              title="Destination"
+              value={packageToView?.destination}
+              onChange={(e) => {
+                setPackageToView({
+                  ...packageToView,
+                  destination: e.target.value,
+                });
+              }}
+            />
+            <Select
+              label="Statut"
+              title="Statut"
+              value={packageToView?.status}
+              items={[
+                { value: "En transit", label: "En transit" },
+                { value: "En entrepôt", label: "En entrepôt" },
+                { value: "Livré", label: "Livré" },
+                { value: "Reçu", label: "Reçu" },
+                { value: "Retard", label: "Retard" },
+              ]}
+              onChange={(e) => {
+                setPackageToView({
+                  ...packageToView,
+                  status: e.target.value,
+                });
+              }}
+            />
+            <Input
+              label="Date de livraison estimée"
+              title="Date de livraison estimée"
+              type="datetime-local"
+              value={serializeDate(packageToView?.estimatedDelivery) ?? ""}
+              onChange={(e) => {
+                setPackageToView({
+                  ...packageToView,
+                  estimatedDelivery: e.target.value,
+                });
+              }}
+            />
+            <p className="flex justify-end items-center gap-2 w-full">
+              <Button
+                variant="cancel"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setPackageToView(null);
+                }}
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="primary"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (packageToView) {
+                    updatePackage(packageToView);
+                    setPackageToView(null);
+                  }
+                }}
+              >
+                Valider
+              </Button>
+            </p>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

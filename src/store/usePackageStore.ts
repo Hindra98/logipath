@@ -1,4 +1,3 @@
-
 import {
   deletePackage,
   listOnePackage,
@@ -6,16 +5,21 @@ import {
   updatePackage,
   updatePackageStatus,
 } from "../services/packageService";
-import {create} from "zustand";
+import { create } from "zustand";
 
-export type PackageStatus = "En transit" | "Livré" | "Reçu" | "Retard";
+export type PackageStatus =
+  | "En transit"
+  | "Livré"
+  | "Reçu"
+  | "Retard"
+  | "En entrepôt";
 
 export interface PackageState {
   loading: boolean;
   success: boolean;
   error: string | null;
 
-  package: Package|null;
+  package: Package | null;
   packages: Package[];
   listPackage: () => void;
   listOnePackage: (trackingNumber: string) => void;
@@ -28,12 +32,12 @@ export interface PackageState {
 export interface GetPackage {
   success: boolean;
   message: string;
-  data:    Package;
+  data: Package;
 }
 export interface GetPackages {
   success: boolean;
   message: string;
-  data:    DataGetPackages;
+  data: DataGetPackages;
 }
 
 export interface DataGetPackages {
@@ -41,19 +45,14 @@ export interface DataGetPackages {
 }
 
 export interface Package {
-  id?:                number;
-  trackingNumber:    string;
-  status:            string;
-  customerName:      string;
-  destination:       string;
-  estimatedDelivery: Date;
-  updatedAt:         Date;
+  id?: number;
+  trackingNumber: string;
+  status: string;
+  customerName: string;
+  destination: string;
+  estimatedDelivery: string;
+  updatedAt: string;
 }
-
-
-
-
-
 
 export const usePackageStore = create<PackageState>((set, get) => ({
   loading: false,
@@ -63,17 +62,20 @@ export const usePackageStore = create<PackageState>((set, get) => ({
   package: null,
   packages: [],
 
-  listPackage: async() =>{
+  listPackage: async () => {
     set({ loading: true, error: null });
     try {
       const response = await listPackage();
       if (response.success) {
         set({ packages: response.data.packages, success: true });
       }
-      console.log("listPackage response :: ", response);
-    } catch (error) {
+    } catch (error: any) {
+      console.log("Error listing packagess:", error.message);
       set({
-        error: `Erreur lors du chargement des colis. ${error.message}`,
+        error:
+          error?.response?.data?.message ??
+          error?.response?.data?.error ??
+          `Erreur lors du chargement des colis.`,
         success: false,
       });
     } finally {
@@ -81,16 +83,20 @@ export const usePackageStore = create<PackageState>((set, get) => ({
     }
   },
 
-  listOnePackage: async(trackingNumber) =>{
+  listOnePackage: async (trackingNumber) => {
     set({ loading: true, error: null });
     try {
       const response = await listOnePackage(trackingNumber);
       if (response.success) {
         set({ package: response.data, success: true });
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.log("Error listing package:", error.message);
       set({
-        error: `Erreur lors du chargement des colis. ${error.message}`,
+        error:
+          error?.response?.data?.message ??
+          error?.response?.data?.error ??
+          `Erreur lors du chargement du colis.`,
         success: false,
       });
     } finally {
@@ -112,9 +118,13 @@ export const usePackageStore = create<PackageState>((set, get) => ({
           : [...currentPackages, response.data];
         set({ packages: updatedPackages, success: true });
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.log("Error updating package:", error.message);
       set({
-        error: `Erreur lors de l'enregistrement du colis. ${error.message}`,
+        error:
+          error?.response?.data?.message ??
+          error?.response?.data?.error ??
+          `Erreur lors de l'enregistrement du colis.`,
         success: false,
       });
     } finally {
@@ -130,9 +140,13 @@ export const usePackageStore = create<PackageState>((set, get) => ({
       const currentPackages = get().packages;
       const updatedPackages = currentPackages.filter((p) => p.id !== id);
       set({ packages: updatedPackages, success: true });
-    } catch (error) {
+    } catch (error: any) {
+      console.log("Error delete package:", error.message);
       set({
-        error: `Erreur lors de la suppression du colis. ${error.message}`,
+        error:
+          error?.response?.data?.message ??
+          error?.response?.data?.error ??
+          `Erreur lors de la suppression du colis.`,
         success: false,
       });
     } finally {
@@ -145,16 +159,22 @@ export const usePackageStore = create<PackageState>((set, get) => ({
     try {
       // Appel à l'API pour ajouter le colis
       const response = await updatePackageStatus({ packageId: id, status });
+        console.log("Package updated:", response);
       if (response.success) {
         const currentPackages = get().packages;
+        console.log("Package updated:", response);
         const updatedPackages = currentPackages.map((p) =>
-          p.id === id ? { ...p, status } : p,
+          p.id === response.data.id ? response.data : p,
         );
         set({ packages: updatedPackages, success: true });
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.log("Error updating status package:", error.message);
       set({
-        error: `Erreur lors de la mise a jour du statut du colis. ${error.message}`,
+        error:
+          error?.response?.data?.message ??
+          error?.response?.data?.error ??
+          `Erreur lors de la mise a jour du statut du colis.`,
         success: false,
       });
     } finally {
@@ -164,4 +184,3 @@ export const usePackageStore = create<PackageState>((set, get) => ({
 
   // filterByOwner: (owner) => get().packages.filter((p) => p.owner === owner),
 }));
-

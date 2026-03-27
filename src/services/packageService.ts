@@ -31,7 +31,7 @@ export async function listPackage(): Promise<GetPackages> {
 return response.data
 }
 export async function updatePackage(update: Package): Promise<GetPackage> {
-  const response = await restClient.post(`/package`, { update });
+  const response = await restClient.post(`/package`, update );
 return response.data
 }
 export async function deletePackage(packageId: number): Promise<void> {
