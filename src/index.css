@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+@import "tailwindcss";
+
+@theme {
+  /* Couleurs de la marque (Brand) */
+  --color-brand-50: #f5f7ff;
+  --color-brand-500: #6366f1;
+  --color-brand-900: #312e81;
+
+  /* Couleurs du Cameroun */
+  --color-cameroun-green: #007a5e;
+  --color-cameroun-red: #ce1126;
+  --color-cameroun-yellow: #fcd116;
+
+  /* Bordures */
+  --radius-xl: 1rem;
+}
