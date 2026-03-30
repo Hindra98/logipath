@@ -1,14 +1,16 @@
-import { Routes, Route } from 'react-router';
+import { Routes, Route, createBrowserRouter, createRoutesFromElements, RouterProvider } from 'react-router';
 import LandingPage from './pages/LandingPage';
 import DashboardLayout from './components/dashboard/DashboardLayout';
 import ProtectedRoute from './components/dashboard/ProtectedRoute';
 import PackageTable from './components/dashboard/PackageTable';
 import UserProfile from './components/dashboard/UserProfile';
 import PageNotFound from './components/dashboard/PageNotFound';
+import { Suspense } from 'react';
+import AppPreloader from './components/dashboard/AppPreloader';
 
-function App() {
-  return (
-    <Routes>
+const router = createBrowserRouter(
+  createRoutesFromElements(
+    <Route>
       <Route path="/" element={<LandingPage />} />
       <Route path="/home" element={<LandingPage />} />
 
@@ -29,7 +31,15 @@ function App() {
       />
 
       <Route path="*" element={<PageNotFound />} />
-    </Routes>
+    </Route>
+  )
+)
+
+function App() {
+  return (
+    <Suspense fallback={<AppPreloader/>}>
+      <RouterProvider router={router} />
+    </Suspense>
   );
 }
 

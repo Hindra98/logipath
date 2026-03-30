@@ -11,6 +11,7 @@ import Modal from "../ui/Modal";
 import { Input, Select } from "../ui/Input";
 import { Check, X, Ellipsis } from "lucide-react";
 import { generateTrackingNumber } from "../../utils/func";
+import UILoader from "../ui/UILoader";
 
 function statusBadge(status: string) {
   const base = "inline-flex items-center px-2 py-1 rounded text-xs font-medium";
@@ -164,7 +165,8 @@ export default function PackageTable() {
           <div className="animate-pulse text-blue-500 flex items-center gap-2 justify-center w-full h-screen z-10 absolute top-0 left-0">
             <div className="flex items-center gap-2 justify-center w-full h-full bg-black opacity-10 absolute" />
             <div className="flex items-center gap-2 justify-center w-full h-full z-10">
-              <div className="size-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              {/* <div className="size-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /> */}
+              <UILoader/>
               <span>Mise à jour en cours...</span>
             </div>
           </div>
