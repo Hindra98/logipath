@@ -51,7 +51,8 @@ export interface Package {
   customerName: string;
   destination: string;
   estimatedDelivery: string;
-  updatedAt: string;
+  updatedAt?: string;
+  isNew?:boolean;
 }
 
 export const usePackageStore = create<PackageState>((set, get) => ({

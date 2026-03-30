@@ -9,7 +9,8 @@ import Button from "../ui/Button";
 import { formatDate, serializeDate } from "../../utils/date-format";
 import Modal from "../ui/Modal";
 import { Input, Select } from "../ui/Input";
-import { Check, X } from "lucide-react";
+import { Check, X, Ellipsis } from "lucide-react";
+import { generateTrackingNumber } from "../../utils/func";
 
 function statusBadge(status: string) {
   const base = "inline-flex items-center px-2 py-1 rounded text-xs font-medium";
@@ -59,6 +60,7 @@ function statusBadge(status: string) {
 export default function PackageTable() {
   const [filter, setFilter] = useState("");
   const [packageToView, setPackageToView] = useState<Package | null>(null);
+  const [errorPackage, setErrorPackage] = useState<Package | null>(null);
   const [packageToDelete, setPackageToDelete] = useState<Package | null>(null);
   const [packageToUpdate, setPackageToUpdate] = useState<Package | null>(null);
   const {
@@ -76,28 +78,86 @@ export default function PackageTable() {
       p.trackingNumber.toLowerCase().includes(filter.toLowerCase()) ||
       p.customerName.toLowerCase().includes(filter.toLowerCase()),
   );
+  const handleSavePackage = (
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent>,
+  ) => {
+    e.preventDefault();
+    if (packageToView) {
+      if (
+        packageToView.customerName === "" ||
+        packageToView.status === "" ||
+        packageToView.destination === "" ||
+        packageToView.estimatedDelivery === ""
+      ) {
+        let errCustomer = "",
+          errStatus = "",
+          errEstimated = "",
+          errDestination = "";
+        if (packageToView.status === "") errStatus = "Champ obligatoire";
+        if (packageToView.destination === "")
+          errDestination = "Champ obligatoire";
+        if (packageToView.customerName === "")
+          errCustomer = "Champ obligatoire";
+        if (packageToView.estimatedDelivery === "")
+          errEstimated = "Champ obligatoire";
+        setErrorPackage({
+          trackingNumber: "",
+          status: errStatus,
+          customerName: errCustomer,
+          destination: errDestination,
+          estimatedDelivery: errEstimated,
+        });
+      } else {
+        updatePackage(packageToView);
+        setPackageToView(null);
+        setErrorPackage(null);
+      }
+    }
+  };
   useEffect(() => {
     listPackage();
   }, []);
   return (
     <div className="w-full relative">
-      <div className="mb-4 flex flex-col md:flex-row items-center gap-4">
-        <input
+      <div className="mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="btns flex items-center gap-2">
+          <Button
+            variant="cancel"
+            onClick={(e) => {
+              e.preventDefault();
+              setPackageToView({
+                trackingNumber: generateTrackingNumber(),
+                status: "En entrepôt",
+                customerName: "",
+                destination: "",
+                estimatedDelivery: Date.now().toString(),
+                isNew: true,
+              });
+              const t = new Date().toString();
+              console.log("Date Add", t);
+              console.log("Serial Add", serializeDate(t));
+            }}
+          >
+            Ajouter
+          </Button>
+
+          <Button
+            variant="cancel"
+            onClick={(e) => {
+              e.preventDefault();
+              listPackage();
+            }}
+          >
+            Rafraichir
+          </Button>
+        </div>
+        <Input
           type="text"
           placeholder="Recherche par ID ou destinataire..."
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="w-full md:w-1/2 px-3 py-2 border rounded focus:outline-none focus:ring focus:border-cameroun-green"
+          className=""
         />
-        <Button
-          variant="cancel"
-          onClick={(e) => {
-            e.preventDefault();
-            listPackage();
-          }}
-        >
-          Rafraichir
-        </Button>
       </div>
       <div className="overflow-x-auto">
         {loading && (
@@ -213,7 +273,7 @@ export default function PackageTable() {
                           setPackageToUpdate(pkg);
                         }}
                       >
-                        ...
+                        <Ellipsis/>
                       </span>{" "}
                     </p>
                   )}
@@ -254,7 +314,7 @@ export default function PackageTable() {
       >
         <div className="space-y-2">
           <p>
-            Voulez-vous supprimer le colis {packageToDelete?.trackingNumber} ?
+            Voulez-vous supprimer le colis <strong>{packageToDelete?.trackingNumber}</strong> ?
           </p>
           <p>
             <strong>Destinataire:</strong> {packageToDelete?.customerName}
@@ -297,6 +357,7 @@ export default function PackageTable() {
             <Input
               label="Destinataire"
               title="Destinataire"
+              error={errorPackage?.customerName}
               value={packageToView?.customerName}
               onChange={(e) => {
                 setPackageToView({
@@ -308,6 +369,7 @@ export default function PackageTable() {
             <Input
               label="Destination"
               title="Destination"
+              error={errorPackage?.destination}
               value={packageToView?.destination}
               onChange={(e) => {
                 setPackageToView({
@@ -319,6 +381,7 @@ export default function PackageTable() {
             <Select
               label="Statut"
               title="Statut"
+              error={errorPackage?.status}
               value={packageToView?.status}
               items={[
                 { value: "En transit", label: "En transit" },
@@ -333,13 +396,16 @@ export default function PackageTable() {
                   status: e.target.value,
                 });
               }}
+              disabled={packageToView?.isNew}
             />
             <Input
               label="Date de livraison estimée"
               title="Date de livraison estimée"
+              error={errorPackage?.estimatedDelivery}
               type="datetime-local"
               value={serializeDate(packageToView?.estimatedDelivery) ?? ""}
               onChange={(e) => {
+                console.log("Change Date :: ", e.target.value);
                 setPackageToView({
                   ...packageToView,
                   estimatedDelivery: e.target.value,
@@ -352,20 +418,12 @@ export default function PackageTable() {
                 onClick={(e) => {
                   e.preventDefault();
                   setPackageToView(null);
+                  setErrorPackage(null);
                 }}
               >
                 Annuler
               </Button>
-              <Button
-                variant="primary"
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (packageToView) {
-                    updatePackage(packageToView);
-                    setPackageToView(null);
-                  }
-                }}
-              >
+              <Button variant="primary" onClick={handleSavePackage}>
                 Valider
               </Button>
             </p>
